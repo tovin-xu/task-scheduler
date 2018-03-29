@@ -40,6 +40,13 @@ enum TaskExecutor {
 
     private Map<String, BlockingQueue<NodeTaskResult>> tasksScheduleQueueMap = Maps.newConcurrentMap();
 
+    private void clear(String parentTaskId) {
+        TaskManager.instance.clearTask(parentTaskId);
+
+        tasksScheduleQueueMap.remove(parentTaskId);
+
+    }
+
     // 添加 task 执行
     public void addNodeTaskResultToTail(String parentTaskId, NodeTaskResult nodeTaskResult) {
         if (ObjectUtils.isEmpty(nodeTaskResult) || Strings.isNullOrEmpty(parentTaskId)) {
@@ -124,7 +131,7 @@ enum TaskExecutor {
             }
         }/** end of  while (true)**/
         System.out.println("####  parentTask(" + parentTaskId + ") scheduler finish, thread exit");
-        TaskManager.instance.clearTask(parentTaskId);
+        clear(parentTaskId);
     }
 
 }

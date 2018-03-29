@@ -1,4 +1,4 @@
-package com.ssslinppp.taskscheduler.testmodel;
+package com.ssslinppp.taskscheduler;
 
 import com.ssslinppp.taskscheduler.model.NodeTask;
 import com.ssslinppp.taskscheduler.model.NodeTaskResult;

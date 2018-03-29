@@ -1,7 +1,6 @@
 package com.ssslinppp.taskscheduler;
 
 import com.ssslinppp.taskscheduler.manager.TaskScheduleManager;
-import com.ssslinppp.taskscheduler.testmodel.AAANodeTask;
 import com.ssslinppp.taskscheduler.model.NodeTask;
 import com.ssslinppp.taskscheduler.model.ParentTask;
 import org.junit.Test;
@@ -21,12 +20,12 @@ public class TaskScheduleManagerTests {
         String nodeF = "nodeF";
         String nodeG = "nodeG";
 
-        NodeTask nodeTaskA = new AAANodeTask(nodeA + "_name", 5_000, parentTaskId, nodeA, null);
+        NodeTask nodeTaskA = new AAANodeTask(nodeA + "_name", 3_000, parentTaskId, nodeA, null);
         NodeTask nodeTaskB = new AAANodeTask(nodeB + "_name", 5_000, parentTaskId, nodeB, null);
-        NodeTask nodeTaskC = new AAANodeTask(nodeC + "_name", 5_000, parentTaskId, nodeC, Arrays.asList(nodeA));
+        NodeTask nodeTaskC = new AAANodeTask(nodeC + "_name", 4_000, parentTaskId, nodeC, Arrays.asList(nodeA));
         NodeTask nodeTaskD = new AAANodeTask(nodeD + "_name", 5_000, parentTaskId, nodeD, Arrays.asList(nodeB));
         NodeTask nodeTaskE = new AAANodeTask(nodeE + "_name", 5_000, parentTaskId, nodeE, Arrays.asList(nodeC, nodeD));
-        NodeTask nodeTaskF = new AAANodeTask(nodeF + "_name", 5_000, parentTaskId, nodeF, Arrays.asList(nodeE));
+        NodeTask nodeTaskF = new AAANodeTask(nodeF + "_name", 3_000, parentTaskId, nodeF, Arrays.asList(nodeE));
         NodeTask nodeTaskG = new AAANodeTask(nodeG + "_name", 5_000, parentTaskId, nodeG, Arrays.asList(nodeE));
 
 
