@@ -31,6 +31,7 @@ public abstract class NodeTask implements Callable<NodeTaskResult> {
 
     private NodeTaskStatus nodeTaskStatus = NodeTaskStatus.init;
     private NodeTaskResult nodeTaskResult;
+    private long maxRuntimeInSec = -1;   //最长运行时间, -1:表示无时间限制
 
     public NodeTask(String parentId, String id, List<String> dependences) {
         this.parentId = parentId;
@@ -39,7 +40,7 @@ public abstract class NodeTask implements Callable<NodeTaskResult> {
     }
 
     public void validate() {
-        if (Strings.isNullOrEmpty(id)) {
+        if (Strings.isNullOrEmpty(id) || Strings.isNullOrEmpty(parentId)) {
             throw new RuntimeException("NodeTask validate fail.");
         }
     }

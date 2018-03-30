@@ -124,7 +124,9 @@ enum TaskManager {
     public void addTask(ParentTask parentTask) {
         parentTask.validate();
 
-        //TODO 判断是否存在相同的ID
+        if (parentTasks.get(parentTask.getId()) != null) {
+            throw new RuntimeException("ParentTask( id: " + parentTask.getId() + ") has exist, please change the parentTask id");
+        }
         parentTasks.put(parentTask.getId(), parentTask);
 
         if (nodeTasks.get(parentTask.getId()) == null) {
@@ -133,6 +135,9 @@ enum TaskManager {
                     Map<String, NodeTask> nodeTaskMap = Maps.newConcurrentMap();
                     for (NodeTask nodeTask : parentTask.getNodeTasks()) {
                         nodeTask.validate();
+                        if (nodeTaskMap.get(nodeTask.getId()) != null) {
+                            throw new RuntimeException("nodeTask id(" + nodeTask.getId() + ") duplication, please change the nodeTask id");
+                        }
                         nodeTaskMap.put(nodeTask.getId(), nodeTask);
                     }
                     nodeTasks.put(parentTask.getId(), nodeTaskMap);
