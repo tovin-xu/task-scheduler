@@ -7,6 +7,7 @@ import com.ssslinppp.taskscheduler.model.NodeTask;
 import com.ssslinppp.taskscheduler.model.NodeTaskStatus;
 import com.ssslinppp.taskscheduler.model.ParentTask;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,7 @@ enum TaskManager {
     /**
      * 维护 ParentTask 和 NodeTasks 的整个状态信息
      */
-    private Map<String, Map<String, NodeTask>> nodeTasks = Maps.newConcurrentMap();
+//    private Map<String, Map<String, NodeTask>> nodeTasks = Maps.newConcurrentMap();
 
     /**
      * 用于判断 ParentTask 是否执行结束or失败
@@ -32,7 +33,7 @@ enum TaskManager {
 
     public void clearTask(String parentTaskId) {
         parentTasks.remove(parentTaskId);
-        nodeTasks.remove(parentTaskId);
+//        nodeTasks.remove(parentTaskId);
     }
 
     public void updateNodeTaskStatus(String parentTaskId, String nodeTaskId, NodeTaskStatus nodeTaskStatus) {
@@ -40,59 +41,101 @@ enum TaskManager {
             throw new RuntimeException("updateNodeTaskStatus: params can not be null");
         }
 
-        if (nodeTasks.get(parentTaskId) != null) {
-            NodeTask nodeTask = nodeTasks.get(parentTaskId).get(nodeTaskId);
-            if (nodeTask == null) {
-                throw new RuntimeException("can not find nodeTask{ parentTaskId: " + parentTaskId + ", nodeTaskId: " + nodeTaskId + "}");
-            }
+        ParentTask parentTask = getParentTask(parentTaskId); //查询不到时，会抛出异常.
 
-            nodeTask.setNodeTaskStatus(nodeTaskStatus);
+        NodeTask nodeTask = parentTask.getNodeTask(nodeTaskId);
+        if (nodeTask == null) {
+            throw new RuntimeException("No nodeTask(parentTaskId: " + parentTaskId + ", nodeTaskId: " + nodeTaskId + ")");
         }
+        nodeTask.setNodeTaskStatus(nodeTaskStatus);
 
         if (nodeTaskStatus == NodeTaskStatus.success) {
-            if (getParentTask(parentTaskId) != null) {
-                getParentTask(parentTaskId).nodeTaskSuccess();
-            }
+            parentTask.nodeTaskSuccess();
         } else if (nodeTaskStatus == NodeTaskStatus.fail) {
-            if (getParentTask(parentTaskId) != null) {
-                getParentTask(parentTaskId).nodeTaskFail();
-            }
+            parentTask.nodeTaskFail();
         }
     }
 
     public boolean isParentTaskFailOrFinish(String parentTaskId) {
-        if (getParentTask(parentTaskId) != null) {
-            return getParentTask(parentTaskId).isParentTaskFailOrFinish();
-        } else {
+        try {
+            ParentTask parentTask = getParentTask(parentTaskId); //查询不到时，会抛出异常
+            return parentTask.isParentTaskFailOrFinish();
+        } catch (Exception e) {//查询不到时，表明success或NodeTask抛出异常
             return true;
         }
     }
 
-    private ParentTask getParentTask(String parentTaskId) {
+    /**
+     * 如果查询不到，则抛出异常【不会返回null】
+     *
+     * @param parentTaskId
+     * @return
+     * @throws RuntimeException
+     */
+    public ParentTask getParentTask(String parentTaskId) throws RuntimeException {
         if (Strings.isNullOrEmpty(parentTaskId)) {
             throw new RuntimeException("parentTaskId can not be null");
         }
 
-        return parentTasks.get(parentTaskId);
+        ParentTask parentTask = parentTasks.get(parentTaskId);
+        if (parentTask == null) {
+            throw new RuntimeException("parentTask has finish [or] any nodeTask exception: [parentTaskId:" + parentTaskId + "]");
+        }
+
+        return parentTask;
     }
 
+    /**
+     * * 当ParentTask完成或NodeTask异常，可能返回null
+     *
+     * @param parentTaskId
+     * @param nodeTaskId
+     * @return 可能返回null
+     * @throws RuntimeException
+     */
+    public NodeTask getNodeTask(String parentTaskId, String nodeTaskId) throws RuntimeException {
+        if (Strings.isNullOrEmpty(parentTaskId) || Strings.isNullOrEmpty(nodeTaskId)) {
+            throw new RuntimeException("parentTaskId or nodeTaskId can not be null");
+        }
+
+        ParentTask parentTask = getParentTask(parentTaskId);
+        if (parentTask == null) {//其他NodeTask失败，导致ParentTask被删除
+            throw new RuntimeException("parentTask has finish [or] any nodeTask exception:" +
+                    "[parentTaskId:" + parentTaskId + ", nodeTaskId: " + nodeTaskId + "]");
+        }
+
+        return parentTask.getNodeTask(nodeTaskId);
+    }
+
+    /**
+     * 当前任务是否可以进行调度
+     *
+     * @param parentTaskId
+     * @param nodeTaskId
+     * @return
+     */
     public boolean canNodeTaskSchedule(String parentTaskId, String nodeTaskId) {
         if (Strings.isNullOrEmpty(parentTaskId) || Strings.isNullOrEmpty(nodeTaskId)) {
             throw new RuntimeException("param can not be null");
         }
 
-        NodeTask nodeTask = nodeTasks.get(parentTaskId).get(nodeTaskId);
+        NodeTask nodeTask = getNodeTask(parentTaskId, nodeTaskId);
+        if (ObjectUtils.isEmpty(nodeTask)) {
+            throw new RuntimeException("No nodeTask(parentTaskId: " + parentTaskId + ", nodeTaskId: " + nodeTaskId + ")");
+        }
+
         if (CollectionUtils.isEmpty(nodeTask.getDependences())) {
             return true;
         }
 
         // 判断依赖NodeTask是否执行完成
         for (String dependTaskId : nodeTask.getDependences()) {
-            if (nodeTasks.get(parentTaskId).get(dependTaskId) == null) {
-                throw new RuntimeException("can not find nodeTask{ parentTaskId: " + parentTaskId + ", nodeTaskId: " + nodeTaskId + "}");
+            NodeTask dependTask = getNodeTask(parentTaskId, dependTaskId);
+            if (ObjectUtils.isEmpty(dependTask)) {
+                throw new RuntimeException("No nodeTask(parentTaskId: " + parentTaskId + ", nodeTaskId: " + dependTaskId + ")");
             }
 
-            if (nodeTasks.get(parentTaskId).get(dependTaskId).getNodeTaskStatus() != NodeTaskStatus.success) {
+            if (dependTask.getNodeTaskStatus() != NodeTaskStatus.success) {
                 return false;
             }
         }
@@ -102,7 +145,8 @@ enum TaskManager {
 
     public List<NodeTask> nodeTasksToBeScheduled(String parentTaskId) {
         List<NodeTask> nodeTasks = Lists.newArrayList();
-        for (NodeTask nodeTask : this.nodeTasks.get(parentTaskId).values()) {
+        ParentTask parentTask = getParentTask(parentTaskId);
+        for (NodeTask nodeTask : parentTask.getNodeTasks().values()) {
             if (nodeTask.getNodeTaskStatus() == NodeTaskStatus.init) {
                 nodeTasks.add(nodeTask);
             }
@@ -118,7 +162,8 @@ enum TaskManager {
      */
     public List<NodeTask> getNoDependentNodeTasks(String parentTaskId) {
         List<NodeTask> nodeTasks = Lists.newArrayList();
-        for (NodeTask nodeTask : this.nodeTasks.get(parentTaskId).values()) {
+        ParentTask parentTask = getParentTask(parentTaskId);
+        for (NodeTask nodeTask : parentTask.getNodeTasks().values()) {
             if (CollectionUtils.isEmpty(nodeTask.getDependences())) {
                 nodeTasks.add(nodeTask);
             }
@@ -130,26 +175,11 @@ enum TaskManager {
     public void addTask(ParentTask parentTask) {
         parentTask.validate();
 
+        // 判断是否重复
         if (parentTasks.get(parentTask.getId()) != null) {
             throw new RuntimeException("ParentTask( id: " + parentTask.getId() + ") has exist, please change the parentTask id");
         }
         parentTasks.put(parentTask.getId(), parentTask);
-
-        if (nodeTasks.get(parentTask.getId()) == null) {
-            synchronized (nodeTasks) {
-                if (nodeTasks.get(parentTask.getId()) == null) {
-                    Map<String, NodeTask> nodeTaskMap = Maps.newConcurrentMap();
-                    for (NodeTask nodeTask : parentTask.getNodeTasks()) {
-                        nodeTask.validate();
-                        if (nodeTaskMap.get(nodeTask.getId()) != null) {
-                            throw new RuntimeException("nodeTask id(" + nodeTask.getId() + ") duplication, please change the nodeTask id");
-                        }
-                        nodeTaskMap.put(nodeTask.getId(), nodeTask);
-                    }
-                    nodeTasks.put(parentTask.getId(), nodeTaskMap);
-                }
-            }
-        }
     }
 
 }

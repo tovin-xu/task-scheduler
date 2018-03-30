@@ -1,11 +1,12 @@
 package com.ssslinppp.taskscheduler;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.ssslinppp.taskscheduler.manager.TaskScheduleManager;
 import com.ssslinppp.taskscheduler.model.NodeTask;
-import com.ssslinppp.taskscheduler.model.ParentTask;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Map;
 
 public class TaskScheduleManagerTests {
 
@@ -21,27 +22,25 @@ public class TaskScheduleManagerTests {
         String nodeG = "nodeG";
 
         NodeTask nodeTaskA = new AAANodeTask(nodeA + "_name", 3_000, parentTaskId, nodeA, null);
-        NodeTask nodeTaskB = new AAANodeTask(nodeB + "_name", 5_000, parentTaskId, nodeB, null);
-        NodeTask nodeTaskC = new AAANodeTask(nodeC + "_name", 4_000, parentTaskId, nodeC, Arrays.asList(nodeA));
-        NodeTask nodeTaskD = new AAANodeTask(nodeD + "_name", 5_000, parentTaskId, nodeD, Arrays.asList(nodeB));
-        NodeTask nodeTaskE = new AAANodeTask(nodeE + "_name", 5_000, parentTaskId, nodeE, Arrays.asList(nodeC, nodeD));
-        NodeTask nodeTaskF = new AAANodeTask(nodeF + "_name", 3_000, parentTaskId, nodeF, Arrays.asList(nodeE));
-        NodeTask nodeTaskG = new AAANodeTask(nodeG + "_name", 5_000, parentTaskId, nodeG, Arrays.asList(nodeE));
+        NodeTask nodeTaskB = new AAANodeTask(nodeB + "_name", 8_000, parentTaskId, nodeB, null);
+        NodeTask nodeTaskC = new AAANodeTask(nodeC + "_name", 2_000, parentTaskId, nodeC, Sets.newHashSet(nodeA));
+        NodeTask nodeTaskD = new AAANodeTask(nodeD + "_name", 3_000, parentTaskId, nodeD, Sets.newHashSet(nodeB));
+        NodeTask nodeTaskE = new AAANodeTask(nodeE + "_name", 5_000, parentTaskId, nodeE, Sets.newHashSet(nodeC, nodeD));
+        NodeTask nodeTaskF = new AAANodeTask(nodeF + "_name", 3_000, parentTaskId, nodeF, Sets.newHashSet(nodeE));
+        NodeTask nodeTaskG = new AAANodeTask(nodeG + "_name", 5_000, parentTaskId, nodeG, Sets.newHashSet(nodeE));
 
-
-        ParentTask parentTask = new ParentTask();
-        parentTask.setId(parentTaskId);
-        parentTask.addNodeTask(nodeTaskA);
-        parentTask.addNodeTask(nodeTaskB);
-        parentTask.addNodeTask(nodeTaskC);
-        parentTask.addNodeTask(nodeTaskD);
-        parentTask.addNodeTask(nodeTaskE);
-        parentTask.addNodeTask(nodeTaskF);
-        parentTask.addNodeTask(nodeTaskG);
+        Map<String, NodeTask> nodeTaskMap = Maps.newConcurrentMap();
+        nodeTaskMap.put(nodeTaskA.getId(), nodeTaskA);
+        nodeTaskMap.put(nodeTaskB.getId(), nodeTaskB);
+        nodeTaskMap.put(nodeTaskC.getId(), nodeTaskC);
+        nodeTaskMap.put(nodeTaskD.getId(), nodeTaskD);
+        nodeTaskMap.put(nodeTaskE.getId(), nodeTaskE);
+        nodeTaskMap.put(nodeTaskF.getId(), nodeTaskF);
+        nodeTaskMap.put(nodeTaskG.getId(), nodeTaskG);
 
         /////////////////////////
-        TaskScheduleManager.instance.startParentTask(parentTask);
-        while (true);
+        TaskScheduleManager.instance.startNodeTasks(nodeTaskMap, new MyTaskStatusListener());
+        while (true) ;
     }
 
 }

@@ -1,11 +1,13 @@
 package com.ssslinppp.taskscheduler.model;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.ssslinppp.taskscheduler.manager.ITaskStatusListener;
+import lombok.Builder;
 import lombok.Data;
 import org.springframework.util.CollectionUtils;
 
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -16,20 +18,39 @@ import java.util.concurrent.atomic.AtomicInteger;
  * To change this template use File | Settings | File Templates.
  */
 @Data
+@Builder
 public class ParentTask {
     private String id;
-    private List<NodeTask> nodeTasks = Lists.newArrayList();
-    private AtomicInteger nodeTskSuccCount = new AtomicInteger(0);
+    private Map<String, NodeTask> nodeTasks = Maps.newConcurrentMap();
+    private AtomicInteger nodeTskSuccCount;  //成功结束的NodeTask个数
     private volatile boolean isTaskFail = false;
+    private ITaskStatusListener taskStatusListener;
+
+    public void validate() {
+        if (Strings.isNullOrEmpty(id) || CollectionUtils.isEmpty(nodeTasks)) {
+            throw new RuntimeException("ParentTask validate fail.");
+        }
+    }
+
+    public NodeTask getNodeTask(String nodeTaskId) {
+        return nodeTasks.get(nodeTaskId);
+    }
 
     public int nodeTaskSuccess() {
+        if (nodeTskSuccCount == null) {
+            synchronized (this) {
+                if (nodeTskSuccCount == null) {
+                    nodeTskSuccCount = new AtomicInteger(0);
+                }
+            }
+        }
+
         return nodeTskSuccCount.addAndGet(1);
     }
 
     public void nodeTaskFail() {
         this.setTaskFail(false);
     }
-
 
     public boolean isParentTaskFailOrFinish() {
         if (isTaskFail || nodeTskSuccCount.get() == nodeTasks.size()) {
@@ -39,21 +60,8 @@ public class ParentTask {
         return false;
     }
 
-    public void validate() {
-        if (Strings.isNullOrEmpty(id) || CollectionUtils.isEmpty(nodeTasks)) {
-            throw new RuntimeException("ParentTask validate fail.");
-        }
-    }
-
-    public void addNodeTask(NodeTask nodeTask) {
-        this.getNodeTasks().add(nodeTask);
-    }
-
-    public void addNodeTasks(List<NodeTask> nodeTasks) {
-        this.getNodeTasks().addAll(nodeTasks);
-    }
-
-    public void initNodeTasks(List<NodeTask> nodeTasks) {
-        this.setNodeTasks(nodeTasks);
+    public double progress() {
+        validate();
+        return (double) nodeTskSuccCount.get() / nodeTasks.size();
     }
 }

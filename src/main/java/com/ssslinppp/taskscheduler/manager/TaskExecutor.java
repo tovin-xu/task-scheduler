@@ -54,11 +54,12 @@ enum TaskExecutor {
         }
 
         try {
-            tasksScheduleQueueMap.get(parentTaskId).put(nodeTaskResult);   //插入到队尾
+            if (tasksScheduleQueueMap.get(parentTaskId) != null) {
+                tasksScheduleQueueMap.get(parentTaskId).put(nodeTaskResult);   //插入到队尾
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
     }
 
     /**
@@ -128,10 +129,11 @@ enum TaskExecutor {
                 }
             } catch (InterruptedException e) {
                 break;
+            } catch (Exception e) {//确保其他异常出现时，可以立即终止 线程调度
+                break;
             }
         }/** end of  while (true)**/
         System.out.println("####  parentTask(" + parentTaskId + ") scheduler finish, thread exit");
         clear(parentTaskId);
     }
-
 }
