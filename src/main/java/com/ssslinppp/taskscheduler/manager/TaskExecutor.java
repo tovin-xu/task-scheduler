@@ -45,7 +45,6 @@ enum TaskExecutor {
         TaskManager.instance.clearTask(parentTaskId);
 
         tasksScheduleQueueMap.remove(parentTaskId);
-
     }
 
     // 添加 task 执行
@@ -118,7 +117,7 @@ enum TaskExecutor {
         while (true) {
             try {
                 // 若获取到，说明有NodeTask已经执行完成
-                NodeTaskResult nodeTaskResult = taskScheduleQueue.take(); //从队列头获取
+                taskScheduleQueue.take(); //从队列头获取
 
                 List<NodeTask> nodeTasksToScheduled = TaskManager.instance.nodeTasksToBeScheduled(parentTaskId);
                 if (CollectionUtils.isEmpty(nodeTasksToScheduled)) {//说明parentTask finish or nodeTask Exception

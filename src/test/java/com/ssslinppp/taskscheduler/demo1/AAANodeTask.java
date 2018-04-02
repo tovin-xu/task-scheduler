@@ -1,7 +1,6 @@
-package com.ssslinppp.taskscheduler;
+package com.ssslinppp.taskscheduler.demo1;
 
 import com.ssslinppp.taskscheduler.model.NodeTask;
-import com.ssslinppp.taskscheduler.model.NodeTaskResult;
 import lombok.Data;
 
 import java.util.Set;
@@ -15,7 +14,7 @@ import java.util.concurrent.TimeUnit;
  * To change this template use File | Settings | File Templates.
  */
 @Data
-public class AAANodeTask extends NodeTask {
+public class AAANodeTask extends NodeTask<String> {
     private long runTime;
 
     public AAANodeTask(long runTime, String id, Set<String> dependences) {
@@ -24,12 +23,12 @@ public class AAANodeTask extends NodeTask {
     }
 
     @Override
-    public NodeTaskResult call() throws Exception {
+    public String doNodeTaskWork() throws Exception {
         System.out.println("Begin to run AAAnodeTask【" + this.getId() + "】 finish, time escape(ms): [" + runTime + "]");
         TimeUnit.MILLISECONDS.sleep(runTime);
         if (this.getId().endsWith("F")) {
             throw new RuntimeException("NodeTaskEEE exception");
         }
-        return NodeTaskResult.builder().id(this.getId()).result("This is 【" + this.getId() + "】AAANodeTask").build();
+        return "[finish] AAANodeTask( " + this.getId() + " ) exec finish";
     }
 }

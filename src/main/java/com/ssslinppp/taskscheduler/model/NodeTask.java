@@ -2,6 +2,7 @@ package com.ssslinppp.taskscheduler.model;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
+import com.ssslinppp.taskscheduler.manager.INodeTaskWork;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -9,20 +10,16 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
- * Desc:
- * <p>
- * User: liulin ,Date: 2018/3/23 , Time: 17:10 <br/>
- * Email: liulin@cmss.chinamobile.com <br/>
- * To change this template use File | Settings | File Templates.
+ * @param <T> the result type of method {@code doNodeTaskWork}
  */
 @Data
 @AllArgsConstructor
-public abstract class NodeTask implements Callable<NodeTaskResult> {
+public abstract class NodeTask<T> implements Callable<NodeTaskResult>, INodeTaskWork<T> {
     private String parentId;
     private String id;                   //唯一标示
-    private Set<String> dependences = Sets.newConcurrentHashSet();   //需要依赖的nodeTask
+    private Set<String> dependences = Sets.newConcurrentHashSet();   //依赖的nodeTask id
     private NodeTaskStatus nodeTaskStatus = NodeTaskStatus.init;
-    private NodeTaskResult nodeTaskResult;  //TODO 不要依赖client去赋值
+    private NodeTaskResult nodeTaskResult;
 
     private String type;                //任务类型 TODO
     private Object metadata;            //task元数据：可以是Json或其他  TODO
@@ -40,6 +37,16 @@ public abstract class NodeTask implements Callable<NodeTaskResult> {
 
     public NodeTask(String id) {
         this.id = id;
+    }
+
+    @Override
+    public NodeTaskResult call() throws Exception {
+        T result = doNodeTaskWork();
+
+        NodeTaskResult nodeTaskResult = new NodeTaskResult();
+        nodeTaskResult.setId(this.id);
+        nodeTaskResult.setResult(result);
+        return nodeTaskResult;
     }
 
     public void validate() {

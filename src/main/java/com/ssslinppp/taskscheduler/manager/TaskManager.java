@@ -144,8 +144,8 @@ enum TaskManager {
         }
 
         // 判断依赖NodeTask是否执行完成
-        for (String dependTaskId : nodeTask.getDependences()) {
-            NodeTask dependTask = getNodeTask(parentTaskId, dependTaskId);
+        for (Object dependTaskId : nodeTask.getDependences()) {
+            NodeTask dependTask = getNodeTask(parentTaskId, (String) dependTaskId);
             if (ObjectUtils.isEmpty(dependTask)) {
                 throw new RuntimeException("parentTask has finish [or] any nodeTask exception,parentTaskId: " + parentTaskId);
             }

@@ -11,7 +11,6 @@ import lombok.Data;
  * To change this template use File | Settings | File Templates.
  */
 @Data
-@Builder
 public class NodeTaskResult {
     private String id;          // 任务唯一标识
     private Object result;     // 子任务执行结果

@@ -34,7 +34,7 @@ public class NodeTaskExecCallback implements FutureCallback<NodeTaskResult> {
     public void onSuccess(NodeTaskResult result) {
         try {
             if (!TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTaskId, NodeTaskStatus.success)) {//更新失败
-                logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
+                logger.warn("[OnSuccess] parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
                 return;
             }
 
@@ -44,7 +44,7 @@ public class NodeTaskExecCallback implements FutureCallback<NodeTaskResult> {
             //触发任务状态监听器
             ParentTask parentTask = TaskManager.instance.getParentTask(parentTaskId);
             if (parentTask == null) {
-                logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
+                logger.warn("[XXX] parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
                 return;
             }
             if (parentTask.getTaskStatusListener() != null) {
