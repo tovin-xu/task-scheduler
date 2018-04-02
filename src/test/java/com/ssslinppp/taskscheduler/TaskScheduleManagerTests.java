@@ -11,23 +11,14 @@ import java.util.Map;
 public class TaskScheduleManagerTests {
 
     @Test
-    public void contextLoads() {
-        String parentTaskId = "parentTaskId-A0001";
-        String nodeA = "nodeA";
-        String nodeB = "nodeB";
-        String nodeC = "nodeC";
-        String nodeD = "nodeD";
-        String nodeE = "nodeE";
-        String nodeF = "nodeF";
-        String nodeG = "nodeG";
-
-        NodeTask nodeTaskA = new AAANodeTask(nodeA + "_name", 3_000, parentTaskId, nodeA, null);
-        NodeTask nodeTaskB = new AAANodeTask(nodeB + "_name", 8_000, parentTaskId, nodeB, null);
-        NodeTask nodeTaskC = new AAANodeTask(nodeC + "_name", 2_000, parentTaskId, nodeC, Sets.newHashSet(nodeA));
-        NodeTask nodeTaskD = new AAANodeTask(nodeD + "_name", 3_000, parentTaskId, nodeD, Sets.newHashSet(nodeB));
-        NodeTask nodeTaskE = new AAANodeTask(nodeE + "_name", 5_000, parentTaskId, nodeE, Sets.newHashSet(nodeC, nodeD));
-        NodeTask nodeTaskF = new AAANodeTask(nodeF + "_name", 3_000, parentTaskId, nodeF, Sets.newHashSet(nodeE));
-        NodeTask nodeTaskG = new AAANodeTask(nodeG + "_name", 5_000, parentTaskId, nodeG, Sets.newHashSet(nodeE));
+    public void testSingleTypeTask() {
+        NodeTask nodeTaskA = new AAANodeTask(3_000, "nodeA", null);
+        NodeTask nodeTaskB = new AAANodeTask(8_000, "nodeB", null);
+        NodeTask nodeTaskC = new AAANodeTask(2_000, "nodeC", Sets.newHashSet(nodeTaskA.getId()));
+        NodeTask nodeTaskD = new AAANodeTask(3_000, "nodeD", Sets.newHashSet(nodeTaskB.getId()));
+        NodeTask nodeTaskE = new AAANodeTask(5_000, "nodeE", Sets.newHashSet(nodeTaskC.getId(), nodeTaskD.getId()));
+        NodeTask nodeTaskF = new AAANodeTask(3_000, "nodeF", Sets.newHashSet(nodeTaskE.getId()));
+        NodeTask nodeTaskG = new AAANodeTask(5_000, "nodeG", Sets.newHashSet(nodeTaskE.getId()));
 
         Map<String, NodeTask> nodeTaskMap = Maps.newConcurrentMap();
         nodeTaskMap.put(nodeTaskA.getId(), nodeTaskA);
