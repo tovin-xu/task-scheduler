@@ -21,19 +21,10 @@ import java.util.Map;
 enum TaskManager {
     instance;
 
-    /**
-     * 维护 ParentTask 和 NodeTasks 的整个状态信息
-     */
-//    private Map<String, Map<String, NodeTask>> nodeTasks = Maps.newConcurrentMap();
-
-    /**
-     * 用于判断 ParentTask 是否执行结束or失败
-     */
-    private Map<String, ParentTask> parentTasks = Maps.newConcurrentMap();
+    private Map<String, ParentTask> parentTasks = Maps.newConcurrentMap();//维护整个任务的状态
 
     public void clearTask(String parentTaskId) {
         parentTasks.remove(parentTaskId);
-//        nodeTasks.remove(parentTaskId);
     }
 
     public void updateNodeTaskStatus(String parentTaskId, String nodeTaskId, NodeTaskStatus nodeTaskStatus) {
