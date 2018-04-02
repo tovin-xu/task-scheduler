@@ -55,8 +55,10 @@ enum TaskExecutor {
         }
 
         try {
-            if (tasksScheduleQueueMap.get(parentTaskId) != null) {
-                tasksScheduleQueueMap.get(parentTaskId).put(nodeTaskResult);   //插入到队尾
+            synchronized (tasksScheduleQueueMap) {
+                if (tasksScheduleQueueMap.get(parentTaskId) != null) {
+                    tasksScheduleQueueMap.get(parentTaskId).put(nodeTaskResult);   //插入到队尾
+                }
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
