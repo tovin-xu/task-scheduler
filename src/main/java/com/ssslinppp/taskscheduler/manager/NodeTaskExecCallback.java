@@ -31,28 +31,33 @@ public class NodeTaskExecCallback implements FutureCallback<NodeTaskResult> {
     }
 
     @Override
-    public void onSuccess(NodeTaskResult result) {//TODO 并发问题：当
-        if (!TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTaskId, NodeTaskStatus.success)) {//更新失败
-            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
-            return;
-        }
+    public void onSuccess(NodeTaskResult result) {
+        try {
+            if (!TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTaskId, NodeTaskStatus.success)) {//更新失败
+                logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
+                return;
+            }
 
-        // 添加执行结果到 BlockingQueue
-        TaskExecutor.instance.addNodeTaskResultToTail(parentTaskId, result);
+            // 添加执行结果到 BlockingQueue
+            TaskExecutor.instance.addNodeTaskResultToTail(parentTaskId, result);
 
-        //触发任务状态监听器
-        ParentTask parentTask = TaskManager.instance.getParentTask(parentTaskId);
-        if (parentTask == null) {
-            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
-            return;
-        }
-        if (parentTask.getTaskStatusListener() != null) {
-            NodeTask nodeTask = parentTask.getNodeTask(nodeTaskId);
-            parentTask.getTaskStatusListener().process(parentTask.progress(), nodeTask, result);
-        }
+            //触发任务状态监听器
+            ParentTask parentTask = TaskManager.instance.getParentTask(parentTaskId);
+            if (parentTask == null) {
+                logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
+                return;
+            }
+            if (parentTask.getTaskStatusListener() != null) {
+                NodeTask nodeTask = parentTask.getNodeTask(nodeTaskId);
+                parentTask.getTaskStatusListener().process(parentTask.progress(), nodeTask, result);
+            }
 
-        // 判断parentTask是否执行结束
-        if (TaskManager.instance.isParentTaskFailOrFinish(parentTaskId)) {
+            // 判断parentTask是否执行结束
+            if (TaskManager.instance.isParentTaskFailOrFinish(parentTaskId)) {
+                TaskScheduleManager.instance.cancelParentTskSchedule(parentTaskId);
+            }
+        } catch (Exception e) {
+            logger.error("NodeTask onSuccess fail, parentTaskId:" + parentTaskId);
             TaskScheduleManager.instance.cancelParentTskSchedule(parentTaskId);
         }
     }

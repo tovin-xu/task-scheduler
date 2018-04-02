@@ -82,8 +82,10 @@ public enum TaskScheduleManager {
      * @param parentTaskId
      */
     public void cancelParentTskSchedule(String parentTaskId) {
-        if (taskScheduleThreadMap.get(parentTaskId) != null) {
-            taskScheduleThreadMap.get(parentTaskId).interrupt();
+        synchronized (taskScheduleThreadMap) {// 可能两个NodeTask同时失败，同时取消
+            if (taskScheduleThreadMap.get(parentTaskId) != null) {
+                taskScheduleThreadMap.get(parentTaskId).interrupt();
+            }
         }
     }
 }
