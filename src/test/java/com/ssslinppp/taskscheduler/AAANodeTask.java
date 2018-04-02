@@ -38,9 +38,9 @@ public class AAANodeTask extends NodeTask {
     public NodeTaskResult call() throws Exception {
         System.out.println("Begin to run AAAnodeTask【" + name + "】 finish, time escape(ms): [" + runTime + "]");
         TimeUnit.MILLISECONDS.sleep(runTime);
-//        if (this.getId().endsWith("E")) {
-//            throw new RuntimeException("NodeTaskEEE exception");
-//        }
+        if (this.getId().endsWith("F")) {
+            throw new RuntimeException("NodeTaskEEE exception");
+        }
         return NodeTaskResult.builder().id(this.getId()).result("This is 【" + name + "】AAANodeTask").build();
     }
 }

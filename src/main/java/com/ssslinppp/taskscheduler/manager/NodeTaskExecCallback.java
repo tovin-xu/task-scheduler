@@ -7,6 +7,8 @@ import com.ssslinppp.taskscheduler.model.NodeTaskStatus;
 import com.ssslinppp.taskscheduler.model.ParentTask;
 import lombok.Getter;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Desc:
@@ -18,6 +20,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class NodeTaskExecCallback implements FutureCallback<NodeTaskResult> {
+    private static Logger logger = LoggerFactory.getLogger(NodeTaskExecCallback.class);
+
     private String parentTaskId;
     private String nodeTaskId;
 
@@ -28,19 +32,22 @@ public class NodeTaskExecCallback implements FutureCallback<NodeTaskResult> {
 
     @Override
     public void onSuccess(NodeTaskResult result) {//TODO 并发问题：当
-        TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTaskId, NodeTaskStatus.success); //TODO: 可能会抛出异常
+        if (!TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTaskId, NodeTaskStatus.success)) {//更新失败
+            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
+            return;
+        }
 
         // 添加执行结果到 BlockingQueue
         TaskExecutor.instance.addNodeTaskResultToTail(parentTaskId, result);
 
+        //触发任务状态监听器
         ParentTask parentTask = TaskManager.instance.getParentTask(parentTaskId);
-        if (parentTask == null) { //可能是其他NodeTask异常，导致整个ParentTask结束
+        if (parentTask == null) {
+            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
             return;
         }
-
-        NodeTask nodeTask = TaskManager.instance.getNodeTask(parentTaskId, nodeTaskId);
-
-        if (parentTask.getTaskStatusListener() != null) {//触发监听器
+        if (parentTask.getTaskStatusListener() != null) {
+            NodeTask nodeTask = parentTask.getNodeTask(nodeTaskId);
             parentTask.getTaskStatusListener().process(parentTask.progress(), nodeTask, result);
         }
 
@@ -48,12 +55,11 @@ public class NodeTaskExecCallback implements FutureCallback<NodeTaskResult> {
         if (TaskManager.instance.isParentTaskFailOrFinish(parentTaskId)) {
             TaskScheduleManager.instance.cancelParentTskSchedule(parentTaskId);
         }
-
     }
 
     @Override
-    public void onFailure(Throwable t) {//TODO: 可能会抛出异常
-        System.out.println("NodeTask(parentTaskId:" + parentTaskId + ", nodeTaskId:" + nodeTaskId + ") exception: " + t.getMessage());
+    public void onFailure(Throwable t) {//TODO: 考虑抛出异常
+        logger.error("nodeTask exec fail, parentTaskId: {}, nodeTaskId: {}", parentTaskId, nodeTaskId);
         TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTaskId, NodeTaskStatus.fail);
         TaskScheduleManager.instance.cancelParentTskSchedule(parentTaskId);
     }

@@ -10,6 +10,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.ssslinppp.taskscheduler.model.NodeTask;
 import com.ssslinppp.taskscheduler.model.NodeTaskResult;
 import com.ssslinppp.taskscheduler.model.NodeTaskStatus;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.util.List;
@@ -85,9 +86,11 @@ enum TaskExecutor {
      */
     private void runNoDependentNodeTasks(String parentTaskId) {
         List<NodeTask> noDependentNodeTasks = TaskManager.instance.getNoDependentNodeTasks(parentTaskId);
+        if (CollectionUtils.isEmpty(noDependentNodeTasks)) {
+            throw new RuntimeException("ParentTask init error, nodeTasks may be not dag(有向无环图)");
+        }
 
         for (NodeTask nodeTask : noDependentNodeTasks) {
-            //TODO 此处是否需要进行 同步处理
             TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTask.getId(), NodeTaskStatus.running);
             ListenableFuture future = pool.submit(nodeTask);
             Futures.addCallback(future, new NodeTaskExecCallback(parentTaskId, nodeTask.getId()));
@@ -117,12 +120,18 @@ enum TaskExecutor {
                 NodeTaskResult nodeTaskResult = taskScheduleQueue.take(); //从队列头获取
 
                 List<NodeTask> nodeTasksToScheduled = TaskManager.instance.nodeTasksToBeScheduled(parentTaskId);
+                if (CollectionUtils.isEmpty(nodeTasksToScheduled)) {//说明parentTask finish or nodeTask Exception
+                    break;
+                }
 
                 for (NodeTask nodeTask : nodeTasksToScheduled) {
                     boolean canSchedule = TaskManager.instance.canNodeTaskSchedule(parentTaskId, nodeTask.getId());
 
                     if (canSchedule) {
-                        TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTask.getId(), NodeTaskStatus.running);
+                        //说明parentTask失败
+                        if (!TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTask.getId(), NodeTaskStatus.running)) {
+                            break;
+                        }
                         ListenableFuture future = pool.submit(nodeTask);
                         Futures.addCallback(future, new NodeTaskExecCallback(parentTaskId, nodeTask.getId()));
                     }

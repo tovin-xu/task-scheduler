@@ -6,6 +6,8 @@ import com.google.common.collect.Maps;
 import com.ssslinppp.taskscheduler.model.NodeTask;
 import com.ssslinppp.taskscheduler.model.NodeTaskStatus;
 import com.ssslinppp.taskscheduler.model.ParentTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
@@ -21,18 +23,32 @@ import java.util.Map;
 enum TaskManager {
     instance;
 
+    private static Logger logger = LoggerFactory.getLogger(TaskManager.class);
+
     private Map<String, ParentTask> parentTasks = Maps.newConcurrentMap();//维护整个任务的状态
 
     public void clearTask(String parentTaskId) {
         parentTasks.remove(parentTaskId);
     }
 
-    public void updateNodeTaskStatus(String parentTaskId, String nodeTaskId, NodeTaskStatus nodeTaskStatus) {
+    /**
+     * 当 ParentTask finish or fail，则不会更新NodeTask的状态
+     *
+     * @param parentTaskId
+     * @param nodeTaskId
+     * @param nodeTaskStatus
+     * @return false: 说明 ParentTask已经失败
+     */
+    public boolean updateNodeTaskStatus(String parentTaskId, String nodeTaskId, NodeTaskStatus nodeTaskStatus) {
         if (Strings.isNullOrEmpty(parentTaskId) || Strings.isNullOrEmpty(nodeTaskId) || nodeTaskStatus == null) {
             throw new RuntimeException("updateNodeTaskStatus: params can not be null");
         }
 
-        ParentTask parentTask = getParentTask(parentTaskId); //查询不到时，会抛出异常.
+        ParentTask parentTask = getParentTask(parentTaskId);
+        if (parentTask == null) {
+            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}, nodeTaskId: {}", parentTaskId, nodeTaskId);
+            return false;
+        }
 
         NodeTask nodeTask = parentTask.getNodeTask(nodeTaskId);
         if (nodeTask == null) {
@@ -45,11 +61,17 @@ enum TaskManager {
         } else if (nodeTaskStatus == NodeTaskStatus.fail) {
             parentTask.nodeTaskFail();
         }
+
+        return true;
     }
 
     public boolean isParentTaskFailOrFinish(String parentTaskId) {
         try {
-            ParentTask parentTask = getParentTask(parentTaskId); //查询不到时，会抛出异常
+            ParentTask parentTask = getParentTask(parentTaskId);
+            if (parentTask == null) {
+                logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
+                return true;
+            }
             return parentTask.isParentTaskFailOrFinish();
         } catch (Exception e) {//查询不到时，表明success或NodeTask抛出异常
             return true;
@@ -57,42 +79,44 @@ enum TaskManager {
     }
 
     /**
-     * 如果查询不到，则抛出异常【不会返回null】
+     * 如果查询不到(返回NULL)，则说明ParentTask success finish 或 any nodeTask exception
+     * <p>
+     * 特别说明： 凡是调用此方法，都需要对null进行判断并处理
      *
      * @param parentTaskId
-     * @return
-     * @throws RuntimeException
+     * @return 可能返回NUlL
      */
-    public ParentTask getParentTask(String parentTaskId) throws RuntimeException {
+    public ParentTask getParentTask(String parentTaskId) {
         if (Strings.isNullOrEmpty(parentTaskId)) {
             throw new RuntimeException("parentTaskId can not be null");
         }
 
         ParentTask parentTask = parentTasks.get(parentTaskId);
         if (parentTask == null) {
-            throw new RuntimeException("parentTask has finish [or] any nodeTask exception: [parentTaskId:" + parentTaskId + "]");
+            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
         }
 
         return parentTask;
     }
 
     /**
-     * * 当ParentTask完成或NodeTask异常，可能返回null
+     * 当ParentTask完成或NodeTask异常，可能返回null
+     * <p>
+     * 特别说明： 凡是调用此方法，都需要对null进行判断并处理
      *
      * @param parentTaskId
      * @param nodeTaskId
      * @return 可能返回null
-     * @throws RuntimeException
      */
-    public NodeTask getNodeTask(String parentTaskId, String nodeTaskId) throws RuntimeException {
+    private NodeTask getNodeTask(String parentTaskId, String nodeTaskId) {
         if (Strings.isNullOrEmpty(parentTaskId) || Strings.isNullOrEmpty(nodeTaskId)) {
             throw new RuntimeException("parentTaskId or nodeTaskId can not be null");
         }
 
         ParentTask parentTask = getParentTask(parentTaskId);
-        if (parentTask == null) {//其他NodeTask失败，导致ParentTask被删除
-            throw new RuntimeException("parentTask has finish [or] any nodeTask exception:" +
-                    "[parentTaskId:" + parentTaskId + ", nodeTaskId: " + nodeTaskId + "]");
+        if (parentTask == null) {
+            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}, nodeTaskId: ", parentTaskId, nodeTaskId);
+            return null;
         }
 
         return parentTask.getNodeTask(nodeTaskId);
@@ -112,7 +136,7 @@ enum TaskManager {
 
         NodeTask nodeTask = getNodeTask(parentTaskId, nodeTaskId);
         if (ObjectUtils.isEmpty(nodeTask)) {
-            throw new RuntimeException("No nodeTask(parentTaskId: " + parentTaskId + ", nodeTaskId: " + nodeTaskId + ")");
+            throw new RuntimeException("parentTask has finish [or] any nodeTask exception,parentTaskId: " + parentTaskId);
         }
 
         if (CollectionUtils.isEmpty(nodeTask.getDependences())) {
@@ -123,7 +147,7 @@ enum TaskManager {
         for (String dependTaskId : nodeTask.getDependences()) {
             NodeTask dependTask = getNodeTask(parentTaskId, dependTaskId);
             if (ObjectUtils.isEmpty(dependTask)) {
-                throw new RuntimeException("No nodeTask(parentTaskId: " + parentTaskId + ", nodeTaskId: " + dependTaskId + ")");
+                throw new RuntimeException("parentTask has finish [or] any nodeTask exception,parentTaskId: " + parentTaskId);
             }
 
             if (dependTask.getNodeTaskStatus() != NodeTaskStatus.success) {
@@ -137,6 +161,11 @@ enum TaskManager {
     public List<NodeTask> nodeTasksToBeScheduled(String parentTaskId) {
         List<NodeTask> nodeTasks = Lists.newArrayList();
         ParentTask parentTask = getParentTask(parentTaskId);
+        if (parentTask == null) {
+            logger.warn("parentTask has finish [or] any nodeTask exception,parentTaskId: {}", parentTaskId);
+            return nodeTasks;
+        }
+
         for (NodeTask nodeTask : parentTask.getNodeTasks().values()) {
             if (nodeTask.getNodeTaskStatus() == NodeTaskStatus.init) {
                 nodeTasks.add(nodeTask);
@@ -154,6 +183,10 @@ enum TaskManager {
     public List<NodeTask> getNoDependentNodeTasks(String parentTaskId) {
         List<NodeTask> nodeTasks = Lists.newArrayList();
         ParentTask parentTask = getParentTask(parentTaskId);
+        if (parentTask == null) {
+            return nodeTasks;
+        }
+
         for (NodeTask nodeTask : parentTask.getNodeTasks().values()) {
             if (CollectionUtils.isEmpty(nodeTask.getDependences())) {
                 nodeTasks.add(nodeTask);
