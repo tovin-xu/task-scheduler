@@ -158,6 +158,12 @@ enum TaskManager {
         return true;
     }
 
+    /**
+     * 所有 {@code nodeState==NodeTaskStatus.init}的任务
+     *
+     * @param parentTaskId
+     * @return
+     */
     public List<NodeTask> nodeTasksToBeScheduled(String parentTaskId) {
         List<NodeTask> nodeTasks = Lists.newArrayList();
         ParentTask parentTask = getParentTask(parentTaskId);
