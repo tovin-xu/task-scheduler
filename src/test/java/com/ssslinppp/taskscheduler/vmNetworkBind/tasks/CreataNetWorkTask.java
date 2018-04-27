@@ -21,7 +21,9 @@ public class CreataNetWorkTask extends NodeTask<String> {
     public String doNodeTaskWork() throws Exception {
         System.out.println("开启创建NetWork...");
         TimeUnit.SECONDS.sleep(3);
-        System.out.println("NetWork创建完成");
-        return "NetWork Finish";
+        throw new RuntimeException("创建network失败");
+//
+//        System.out.println("NetWork创建完成");
+//        return "NetWork Finish";
     }
 }

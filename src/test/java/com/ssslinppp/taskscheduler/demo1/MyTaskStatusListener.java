@@ -1,7 +1,6 @@
 package com.ssslinppp.taskscheduler.demo1;
 
 import com.ssslinppp.taskscheduler.manager.ITaskStatusListener;
-import com.ssslinppp.taskscheduler.model.NodeTask;
 import com.ssslinppp.taskscheduler.model.NodeTaskResult;
 
 /**
@@ -12,8 +11,14 @@ import com.ssslinppp.taskscheduler.model.NodeTaskResult;
  * To change this template use File | Settings | File Templates.
  */
 public class MyTaskStatusListener implements ITaskStatusListener {
+
     @Override
-    public void process(double process, NodeTask nodeTask, NodeTaskResult taskResult) {
-        System.out.println("nodeTask: [" + nodeTask.getId() + "] success , 当前进度：" + process);
+    public void process(double process, String nodeTaskId, NodeTaskResult taskResult) {
+        System.out.println("nodeTask: [" + nodeTaskId + "] success , 当前进度：" + process);
+    }
+
+    @Override
+    public void onFail(String nodeTaskId, Throwable t) {
+
     }
 }

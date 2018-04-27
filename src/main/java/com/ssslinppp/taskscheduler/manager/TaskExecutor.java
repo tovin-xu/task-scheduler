@@ -146,7 +146,7 @@ enum TaskExecutor {
                 break;
             }
         }/** end of  while (true)**/
-        logger.info("parentTask:{} ,scheduler finish or fail, thread exit", parentTaskId);
+        logger.info("### parentTask:{} ,【scheduler finish or fail】, thread exit", parentTaskId);
         clear(parentTaskId);
     }
 }
