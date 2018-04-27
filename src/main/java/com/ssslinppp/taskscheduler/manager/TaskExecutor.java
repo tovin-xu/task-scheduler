@@ -10,6 +10,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.ssslinppp.taskscheduler.model.NodeTask;
 import com.ssslinppp.taskscheduler.model.NodeTaskResult;
 import com.ssslinppp.taskscheduler.model.NodeTaskStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
@@ -35,6 +37,8 @@ import java.util.concurrent.Executors;
  */
 enum TaskExecutor {
     instance;
+
+    private static Logger logger = LoggerFactory.getLogger(NodeTaskExecCallback.class);
 
     private ListeningExecutorService pool = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(
             Runtime.getRuntime().availableProcessors()));
@@ -142,7 +146,7 @@ enum TaskExecutor {
                 break;
             }
         }/** end of  while (true)**/
-        System.out.println("####  parentTask(" + parentTaskId + ") scheduler finish, thread exit");
+        logger.info("parentTask:{} ,scheduler finish or fail, thread exit", parentTaskId);
         clear(parentTaskId);
     }
 }
