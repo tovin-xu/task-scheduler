@@ -64,7 +64,7 @@ public class NodeTaskExecCallback implements FutureCallback<NodeTaskResult> {
 
     @Override
     public void onFailure(Throwable t) {//TODO: 考虑抛出异常
-        logger.error("nodeTask exec fail, parentTaskId: {}, nodeTaskId: {}", parentTaskId, nodeTaskId);
+        logger.error("nodeTask exec fail , parentTaskId: {}, nodeTaskId: {}, errorMsg: {}", parentTaskId, nodeTaskId, t.getMessage());
         TaskManager.instance.updateNodeTaskStatus(parentTaskId, nodeTaskId, NodeTaskStatus.fail);
         TaskScheduleManager.instance.cancelParentTskSchedule(parentTaskId);
     }
